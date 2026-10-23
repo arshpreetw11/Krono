@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kronos-consumer-analytics
+  labels:
+    {{- include "kronos.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.consumerAnalytics.replicas }}
+  selector:
+    matchLabels:
+      app: kronos-consumer-analytics
+  template:
+    metadata:
+      labels:
+        app: kronos-consumer-analytics
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nslookup kronos-kafka.default.svc.cluster.local; do echo waiting for kafka; sleep 2; done']
+      containers:
+        - name: consumer-analytics
+          image: "{{ .Values.consumerAnalytics.image }}:{{ .Values.consumerAnalytics.tag }}"
+          imagePullPolicy: Never
+          args: ["-kafka-broker={{ .Values.kafka.broker }}"]
+          ports:
+            - containerPort: {{ .Values.consumerAnalytics.metricsPort }}
